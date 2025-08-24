@@ -15,4 +15,7 @@ export interface ISmartDBClient {
   getDocumentById(id: RawDocument['id']): Promise<Document | null>;
   getUserByUsername(username: User['username']): Promise<User | null>;
   getUserById(id: User['id']): Promise<User | null>;
+
+  // hooks
+  onLoginSuccess?: () => void;
 }
