@@ -21,6 +21,10 @@ export class SmartDBClient implements ISmartDBClient {
     return this.baseUrl;
   }
 
+  get isLoggedIn(): boolean {
+    return this.token !== null;
+  }
+
   private get token(): string | null {
     return this.storage.getItem('token');
   }

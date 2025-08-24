@@ -6,6 +6,7 @@ export interface ISmartDBClient {
   _request<T>(path: string, options?: RequestInit): Promise<T>;
   logout(): void;
   get url(): string;
+  get isLoggedIn(): boolean;
   chat(question: string, model:LLModel, projectId?: string|number, include?: string[], exclude?: string[], conversation?: ConversationMessage[]) : Promise<ChatResponse>;
   semanticSearch(query: string, project?: RawProject['id']): Promise<SearchResult[]>;
   getProjects(): Promise<Project[]>;
