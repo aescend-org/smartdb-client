@@ -12,6 +12,8 @@ export class SmartDBClient implements ISmartDBClient {
   private projectCache: Map<Project['id'], Project> = new Map();
   private documentCache: Map<Document['id'], Document> = new Map();
 
+  public onLoginSuccess?: () => void;
+
   constructor(url: string, storage: Storage = new Store()) {
     this.baseUrl = validUrl(url);
     this.storage = storage;

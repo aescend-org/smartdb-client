@@ -10,3 +10,16 @@ export type LLMDetail = components["schemas"]["LLModelDetail"]
 
 export type RawProject = components["schemas"]["ProjectResponse"]
 export type RawDocument = components["schemas"]["DocumentResponse"]
+export type MetaData = components["schemas"]["MetaData"]
+
+export type SearchContent = {
+  page_content: string,
+  metadata: Partial<MetaData>
+  type: string
+}
+
+export type SearchResult = {
+  result: SearchContent,
+  score: number,
+  type?: 'text' | 'image'
+}
