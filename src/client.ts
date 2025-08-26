@@ -1,22 +1,29 @@
-import type { ISmartDBClient } from "./types/client.types";
+import type { ClientOptions, ISmartDBClient } from "./types/client.types";
 import { Project } from "./project";
-import type { ChatResponse, ConversationMessage, LLModel, RawProject, TokenData, User } from "./types/api.types";
+import type { ChatResponse, ConversationMessage, LLModel, RawChunk, RawProject, SearchResult, TokenData, User } from "./types/api.types";
 import { Store } from "./utils/store";
 import { validUrl } from "./utils/url";
 import { Document } from "./document";
+import { DomainCache, InMemoryCache, type Cache } from "./cache";
 
 export class SmartDBClient implements ISmartDBClient {
   private baseUrl: string;
-  private storage: Storage;
-  private userCache: Map<User['username'], User> = new Map();
-  private projectCache: Map<Project['id'], Project> = new Map();
-  private documentCache: Map<Document['id'], Document> = new Map();
+  private storage: Storage; // for persisting token across sessions
+  private cache: Cache; // for caching domain objects
+
+  public verbose: boolean = false;
 
   public onLoginSuccess?: () => void;
 
-  constructor(url: string, storage: Storage = new Store()) {
+  constructor(url: string, opt?: ClientOptions) {
     this.baseUrl = validUrl(url);
-    this.storage = storage;
+    this.verbose = opt?.verbose || false;
+    this.storage = opt?.storage || new Store();
+    this.cache = opt?.cache || new InMemoryCache();
+
+    if (this.verbose) {
+      console.debug(`SmartDBClient initialized with baseUrl: ${this.baseUrl}`);
+    }
   }
 
   get url(): string {
@@ -47,7 +54,7 @@ export class SmartDBClient implements ISmartDBClient {
       headers['Content-Type'] = 'application/json';
     }
     options.headers = headers;
-    console.log('Requesting', this.baseUrl + path, options);
+    if (this.verbose) console.debug('Requesting', this.baseUrl + path, options);
     const res = await fetch(this.baseUrl + path, options);
     if (!res.ok) {
       throw new Error(`Request failed with status ${res.status}`);
@@ -79,7 +86,7 @@ export class SmartDBClient implements ISmartDBClient {
   }
 
   async logout(): Promise<void> {
-    this.uncacheAll();
+    this.cache.clear?.();
     this.token = null;
   }
 
@@ -112,40 +119,52 @@ export class SmartDBClient implements ISmartDBClient {
 
   async getProjects(): Promise<Project[]> {
     const rawProjects = await this._request<RawProject[]>('/vector/projects');
-    const projects = rawProjects.map(p => Project.from(p, this));
-    projects.forEach(p => this.projectCache.set(p.id, p));
+    const projects = rawProjects.map(p => new Project(p, this, this.cache));
+    projects.forEach(p => this.projectCache.set(p.id.toString(), p));
     return projects;
   }
 
   async getProjectById(id: RawProject['id']): Promise<Project> {
-    if (this.projectCache.has(id)) {
-      return this.projectCache.get(id)!;
+    if (this.projectCache.has(id.toString())) {
+      if (this.verbose) console.debug(`Project ${id} found in cache`);
+      return this.projectCache.get(id.toString())!;
     }
     const rawProject = await this._request<RawProject>(`/vector/projects/${id}`);
-    const project = Project.from(rawProject, this);
-    this.projectCache.set(project.id, project);
+    const project = new Project(rawProject, this, this.cache);
     return project;
   }
 
   async getDocuments(): Promise<Document[]> {
     const docs = await this._request<{ documents: any[] }>(`/vector/documents`);
-    const documents = docs.documents.map(doc => Document.from(doc, this));
-    documents.forEach(d => this.documentCache.set(d.id, d));
+    const documents = docs.documents.map(doc => new Document(doc, this, this.cache));
+    documents.forEach(d => this.documentCache.set(d.id.toString(), d));
     return documents;
   }
 
   async getDocumentById(id: Document['id']): Promise<Document> {
-    if (this.documentCache.has(id)) {
-      return this.documentCache.get(id)!;
+    if (this.documentCache.has(id.toString())) {
+      if (this.verbose) console.debug(`Document ${id} found in cache`);
+      return this.documentCache.get(id.toString())!;
     }
     const doc = await this._request<any>(`/vector/documents/${id}`);
-    const document = Document.from(doc, this);
-    this.documentCache.set(document.id, document);
+    const document = new Document(doc, this, this.chunkCache);
+    this.documentCache.set(document.id.toString(), document);
     return document;
+  }
+
+  async getChunkById(id: RawChunk['id']): Promise<RawChunk> {
+    if (this.chunkCache.has(id.toString())) {
+      if (this.verbose) console.debug(`Chunk ${id} found in cache`);
+      return this.chunkCache.get(id.toString())!;
+    }
+    const chunk = await this._request<RawChunk>(`/vector/chunks/${id}`);
+    this.chunkCache.set(chunk.id.toString(), chunk);
+    return chunk;
   }
 
   async getUserByUsername(username: User['username']): Promise<User | null> {
     if (this.userCache.has(username)) {
+      if (this.verbose) console.debug(`User ${username} found in cache`);
       return this.userCache.get(username)!;
     }
     try {
@@ -170,19 +189,20 @@ export class SmartDBClient implements ISmartDBClient {
     }
   }
 
-  uncacheAll() {
-    this.userCache.clear();
-    this.projectCache.clear();
-    this.documentCache.clear();
+  private get projectCache(): DomainCache<Project> {
+    return new DomainCache<Project>(this.cache, Project.domainKey);
   }
 
-  uncacheUser(username: User['username']) {
-    this.userCache.delete(username);
+  private get documentCache(): DomainCache<Document> {
+    return new DomainCache<Document>(this.cache, Document.domainKey);
   }
-  uncacheProject(id: Project['id']) {
-    this.projectCache.delete(id);
+
+  private get chunkCache(): DomainCache<RawChunk> {
+    return new DomainCache<RawChunk>(this.cache, 'chunk');
   }
-  uncacheDocument(id: Document['id']) {
-    this.documentCache.delete(id);
+
+  private get userCache(): DomainCache<User> {
+    return new DomainCache<User>(this.cache, 'user');
   }
 }
+

@@ -1,5 +1,6 @@
-import type { ChatResponse, ConversationMessage, LLModel, RawDocument, RawProject, TokenData, User } from "./api.types";
+import type { ChatResponse, ConversationMessage, LLModel, RawDocument, RawProject, SearchResult, User } from "./api.types";
 import type { Project } from "../project";
+import type { Cache } from "../cache";
 
 export interface ISmartDBClient {
   login(username: string, password: string): Promise<void>;
@@ -18,4 +19,10 @@ export interface ISmartDBClient {
 
   // hooks
   onLoginSuccess?: () => void;
+}
+
+export type ClientOptions = {
+  storage?: Storage; // for persisting token across sessions
+  cache?: Cache; // for caching domain objects
+  verbose?: boolean;
 }
