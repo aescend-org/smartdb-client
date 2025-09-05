@@ -14,6 +14,7 @@ export class SmartDBClient implements ISmartDBClient {
   public verbose: boolean = false;
 
   public onLoginSuccess?: () => void;
+  public onLogout?: () => void;
 
   constructor(url: string, opt?: ClientOptions) {
     this.baseUrl = validUrl(url);
@@ -57,6 +58,9 @@ export class SmartDBClient implements ISmartDBClient {
     if (this.verbose) console.debug('Requesting', this.baseUrl + path, options);
     const res = await fetch(this.baseUrl + path, options);
     if (!res.ok) {
+      if (res.status === 401) {
+        this.token = null; // clear token on unauthorized
+      }
       throw new Error(`Request failed with status ${res.status}`);
     }
     return await res.json() as Promise<T>;
@@ -83,11 +87,15 @@ export class SmartDBClient implements ISmartDBClient {
       throw new Error('No access token in response');
     }
     this.token = resp.access_token;
+    this.onLoginSuccess?.();
+    if (this.verbose) console.debug('Login successful, token stored');
   }
 
   async logout(): Promise<void> {
     this.cache.clear?.();
     this.token = null;
+    this.onLogout?.();
+    if (this.verbose) console.debug('Logged out, token cleared');
   }
 
   async getCurrentUser(): Promise<User> {
