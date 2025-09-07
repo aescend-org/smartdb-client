@@ -45,6 +45,18 @@ export class Document {
     return this._client.getUserByUsername(this.ownername);
   }
 
+  async getCitation(): Promise<string|undefined> {
+    return await this._client?._request<string>(`/cite/bibtex?documents=${this.id}`, { method: 'GET' });
+  }
+
+  // @article{citationKey, ...
+  async getCitationKey(): Promise<string|undefined> {
+    const cite = await this.getCitation();
+    if (!cite) return undefined;
+    const match = cite.match(/@(\w+)\{([^,]+),/);
+    return match ? match[2] : undefined;
+  }
+
   private async loadChunks(): Promise<RawChunk[]> {
     if (!this._client) {
       throw new Error("Client not set");
