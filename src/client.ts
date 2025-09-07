@@ -1,6 +1,6 @@
 import type { ClientOptions, ISmartDBClient } from "./types/client.types";
 import { Project } from "./project";
-import type { ChatResponse, ConversationMessage, LLModel, RawChunk, RawProject, SearchResult, TokenData, User } from "./types/api.types";
+import type { ChatResponse, ConversationMessage, LLModel, RawChunk, RawDocument, RawProject, SearchResult, TokenData, User } from "./types/api.types";
 import { Store } from "./utils/store";
 import { validUrl } from "./utils/url";
 import { Document } from "./document";
@@ -158,6 +158,17 @@ export class SmartDBClient implements ISmartDBClient {
     const document = new Document(doc, this, this.chunkCache);
     this.documentCache.set(document.id.toString(), document);
     return document;
+  }
+
+  async getDocumentByChunkId(chunkId: RawChunk['id']): Promise<Document | null> {
+    try {
+      const doc = await this._request<RawDocument>(`/vector/chunks/${chunkId}/document`);
+      const document = new Document(doc, this, this.chunkCache);
+      this.documentCache.set(document.id.toString(), document);
+      return document;
+    } catch (e) {
+      return null;
+    }
   }
 
   async getChunkById(id: RawChunk['id']): Promise<RawChunk> {

@@ -1,4 +1,4 @@
-import type { ChatResponse, ConversationMessage, LLModel, RawDocument, RawProject, SearchResult, User } from "./api.types";
+import type { ChatResponse, ConversationMessage, LLModel, RawChunk, RawDocument, RawProject, SearchResult, User } from "./api.types";
 import type { Project } from "../project";
 import type { Cache } from "../cache";
 
@@ -14,6 +14,7 @@ export interface ISmartDBClient {
   getProjectById(id: RawProject['id']): Promise<Project | null>;
   getDocuments(): Promise<Document[]>
   getDocumentById(id: RawDocument['id']): Promise<Document | null>;
+  getDocumentByChunkId(chunkId: RawChunk['id']): Promise<Document | null>;
   getUserByUsername(username: User['username']): Promise<User | null>;
   getUserById(id: User['id']): Promise<User | null>;
 
