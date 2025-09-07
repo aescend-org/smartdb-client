@@ -172,13 +172,11 @@ export class SmartDBClient implements ISmartDBClient {
   }
 
   async getDocumentByTitle(title: RawDocument['title']): Promise<Document | null> {
-    const doc = await this._request<{ 
-      document: RawDocument 
-    }>(
+    const doc = await this._request<RawDocument>(
       `/vector/documents/by-title/${encodeURI(title as string).replace(/\?/g, '%3F').replace(/&/g, '%26')}`
     );
     if (!doc.document) return null;
-    const document = new Document(doc.document, this, this.chunkCache);
+    const document = new Document(doc, this, this.chunkCache);
     this.documentCache.set(document.id.toString(), document);
     return document;
   }
