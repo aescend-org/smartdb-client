@@ -15,6 +15,7 @@ export interface ISmartDBClient {
   getDocuments(): Promise<Document[]>
   getDocumentById(id: RawDocument['id']): Promise<Document | null>;
   getDocumentByChunkId(chunkId: RawChunk['id']): Promise<Document | null>;
+  getDocumentByTitle(title: RawDocument['title']): Promise<Document | null>;
   getUserByUsername(username: User['username']): Promise<User | null>;
   getUserById(id: User['id']): Promise<User | null>;
 

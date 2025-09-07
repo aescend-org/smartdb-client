@@ -171,6 +171,18 @@ export class SmartDBClient implements ISmartDBClient {
     }
   }
 
+  async getDocumentByTitle(title: RawDocument['title']): Promise<Document | null> {
+    const doc = await this._request<{ 
+      document: RawDocument 
+    }>(
+      `/vector/documents/by-title/${encodeURI(title as string).replace(/\?/g, '%3F').replace(/&/g, '%26')}`
+    );
+    if (!doc.document) return null;
+    const document = new Document(doc.document, this, this.chunkCache);
+    this.documentCache.set(document.id.toString(), document);
+    return document;
+  }
+
   async getChunkById(id: RawChunk['id']): Promise<RawChunk> {
     if (this.chunkCache.has(id.toString())) {
       if (this.verbose) console.debug(`Chunk ${id} found in cache`);
